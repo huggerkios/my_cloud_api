@@ -1,5 +1,14 @@
-from django.urls import path
+from django.urls import path, include
 
-from .views import EmptyViewSet
+from rest_framework import routers
 
-urlpatterns = [path("", EmptyViewSet.as_view())]
+from .views import UserViewSet, AuthViewSet
+
+router = routers.DefaultRouter()
+
+router.register("auth", AuthViewSet, basename="auth")
+router.register("users", UserViewSet, basename="users")
+
+urlpatterns = [
+    path("", include(router.urls)),
+]
