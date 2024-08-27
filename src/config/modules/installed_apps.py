@@ -7,6 +7,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "djoser",
     "split_settings",
     "apps.administration.apps.AdministrationConfig",
     "apps.cloud.apps.CloudConfig",
