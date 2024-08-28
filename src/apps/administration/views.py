@@ -1,10 +1,13 @@
-from django.contrib.auth import get_user_model
-from django.contrib.auth import login, authenticate, logout
+import logging
+
+from django.contrib.auth import get_user_model, login, authenticate, logout
 from django.http import HttpRequest, HttpResponse
 
 from rest_framework import viewsets, permissions, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.serializers import CharField, BooleanField
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 
 from .serializers import (
     UserListSerializer,
@@ -12,10 +15,45 @@ from .serializers import (
     UserRegistrationSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
+@extend_schema(tags=["auth"])
+@extend_schema_view(
+    registration=extend_schema(
+        summary="Регистрация",
+        responses={
+            status.HTTP_201_CREATED: UserRegistrationSerializer,
+        },
+    ),
+    login=extend_schema(
+        summary="Вход в аккаунт",
+        responses={
+            status.HTTP_200_OK: inline_serializer(
+                name="login_detail_message",
+                fields={
+                    "detail": CharField(),
+                },
+            ),
+        },
+    ),
+    logout=extend_schema(
+        summary="Выход из аккаунта",
+        responses={
+            status.HTTP_200_OK: inline_serializer(
+                name="logout_detail_message",
+                fields={
+                    "detail": CharField(),
+                },
+            ),
+        },
+    ),
+)
 class AuthViewSet(viewsets.GenericViewSet):
+    """Authentication actions."""
+
     @action(
         methods=("post",),
         detail=False,
@@ -23,9 +61,12 @@ class AuthViewSet(viewsets.GenericViewSet):
         permission_classes=(permissions.AllowAny,),
     )
     def registration(self, request, *args, **kwargs):
+        logger.info(f"Запрос регистрации: {request.data}")
+
         serializer = self.get_serializer(data=request.data, many=False)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
         return Response(
             serializer.data,
             status=status.HTTP_201_CREATED,
@@ -38,9 +79,11 @@ class AuthViewSet(viewsets.GenericViewSet):
         permission_classes=(permissions.AllowAny,),
     )
     def login(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        logger.info(f"Запрос авторизации: {request.data}")
+
         serializer = self.get_serializer(data=request.data, many=False)
         serializer.is_valid(raise_exception=True)
-        # logged passed data
+        logger.info("Данные валидны.")
 
         username = serializer.validated_data.get("username")
         password = serializer.validated_data.get("password")
@@ -48,14 +91,16 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         if user is not None:
             login(request, user)
-            # loggen user login succeed
+
+            logger.info(f"Авторизация выполнена. Пользователь: {user}.")
             return Response(
                 {
                     "detail": "Вход выполнен.",
                 },
                 status=status.HTTP_200_OK,
             )
-        # loggen user login failed
+
+        logger.info("Авторизация не выполнена. Пользователь с этими данными не найден.")
         return Response(
             {
                 "detail": "Пользователь не найден.",
@@ -70,7 +115,10 @@ class AuthViewSet(viewsets.GenericViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def logout(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        logger.info(f"Запрос выхода из аккаунта: {request.user}")
+
         logout(request)
+        logger.info("Выход выполнен.")
 
         return Response(
             {
@@ -80,12 +128,43 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
-class UserViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+@extend_schema(tags=["users"])
+@extend_schema_view(
+    list=extend_schema(
+        summary="Список пользователей",
+    ),
+    destroy=extend_schema(
+        summary="Удаление пользователя",
+    ),
+    admin_status_set=extend_schema(
+        summary="Изменение статуса пользователя",
+        responses={
+            status.HTTP_201_CREATED: inline_serializer(
+                name="admin_status_set_detail_message",
+                fields={
+                    "is_admin": BooleanField(),
+                },
+            ),
+        },
+    ),
+)
+class UserViewSet(
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+):
+    """Admin panel actions."""
+
     http_method_names = ("get", "post", "delete")
     lookup_field = "username"
     queryset = User.objects.all()
     serializer_class = UserListSerializer
     permission_classes = (permissions.IsAdminUser,)
+
+    def perform_destroy(self, user):
+        logger.info(
+            f"Удаление пользователя {user.username} администратором "
+            f"{self.request.user.username}"
+        )
+        return super().perform_destroy(user)
 
     @action(
         methods=("post",),
@@ -99,27 +178,14 @@ class UserViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         user.is_staff = not user.is_staff
         user.save()
 
-        return Response(
-            {
-                "admin": user.is_staff,
-            },
-            status=status.HTTP_201_CREATED,
+        logger.info(
+            f"Изменение статуса администратора пользователя {user.username} администратором "
+            f"{self.request.user.username}: {user.is_staff}"
         )
 
-    @action(
-        methods=("delete",),
-        detail=True,
-        url_path="delete",
-        serializer_class=None,
-        permission_classes=(permissions.IsAdminUser,),
-    )
-    def destroy_user(self, request, *args, **kwargs):
-        user = self.get_object()
-        user.delete()
-
         return Response(
             {
-                "detail": "Пользователь удалён.",
+                "is_admin": user.is_staff,
             },
-            status=status.HTTP_204_NO_CONTENT,
+            status=status.HTTP_201_CREATED,
         )

@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -5,6 +7,11 @@ from .validators import LoginRegexValidator
 
 
 class User(AbstractUser):
+    """Custom user model."""
+
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+    )
     full_name = models.CharField(
         ("Полное имя"),
         max_length=300,

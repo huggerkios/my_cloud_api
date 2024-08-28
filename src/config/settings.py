@@ -48,11 +48,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "/static/"
+STATIC_URL = os.getenv("STATIC_STORAGE", default="/static/")
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
-MEDIA_URL = "/media/"
+MEDIA_URL = os.getenv("MEDIA_STORAGE", default="/media/")
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
