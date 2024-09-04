@@ -1,11 +1,10 @@
 import uuid
 
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-User = get_user_model()
+from config.modules.authorization import AUTH_USER_MODEL
 
 
 def user_files_path(instance, filename):
@@ -20,7 +19,7 @@ class File(models.Model):
         default=uuid.uuid4,
     )
     user = models.ForeignKey(
-        User,
+        AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="files",
     )
