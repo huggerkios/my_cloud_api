@@ -86,26 +86,41 @@ class AuthViewSet(viewsets.GenericViewSet):
         logger.info("Данные валидны.")
 
         username = serializer.validated_data.get("username")
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            logger.info(
+                f"Авторизация не выполнена. Пользователь с логином {username} не найден."
+            )
+            return Response(
+                {
+                    "detail": "Проверьте корректность логина.",
+                    "code": "invalid_username",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         password = serializer.validated_data.get("password")
         user = authenticate(username=username, password=password)
 
-        if user is not None:
-            login(request, user)
-
-            logger.info(f"Авторизация выполнена. Пользователь: {user}.")
+        if user is None:
+            logger.info("Авторизация не выполнена. Пароль не совпадает.")
             return Response(
                 {
-                    "detail": "Вход выполнен.",
+                    "detail": "Проверьте корректность пароля.",
+                    "code": "invalid_password",
                 },
-                status=status.HTTP_200_OK,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        logger.info("Авторизация не выполнена. Пользователь с этими данными не найден.")
+        login(request, user)
+
+        logger.info(f"Авторизация выполнена. Пользователь: {user}.")
         return Response(
             {
-                "detail": "Пользователь не найден.",
+                "detail": "Вход выполнен.",
             },
-            status=status.HTTP_404_NOT_FOUND,
+            status=status.HTTP_200_OK,
         )
 
     @action(

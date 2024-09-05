@@ -68,6 +68,10 @@ class UserRegistrationSerializer(UserCreateSerializer):
         required=False,
     )
 
+    default_error_messages = {
+        "cannot_create_user": "Пользователь с текущими данными уже существует."
+    }
+
     class Meta:
         model = User
         fields = (
