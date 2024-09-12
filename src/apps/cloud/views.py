@@ -157,8 +157,9 @@ class FileViewSet(viewsets.ModelViewSet):
     def download(self, request, pk=None, *args, **kwargs):
         instance = self.get_object()
 
-        response = HttpResponse(instance.file, content_type=instance.type)
+        response = HttpResponse(instance.file.open(), content_type=instance.type)
         response["Content-Disposition"] = "attachment;filename=" + instance.name
+        response['Content-Length'] = instance.file.size
         response["Access-Control-Expose-Headers"] = "Content-Disposition"
 
         logger.info(
