@@ -73,6 +73,9 @@ class FileViewSet(viewsets.ModelViewSet):
     lookup_field = "uuid"
     serializer_class = FileSerializer
     permission_classes = (permissions.IsAuthenticated,)
+    permission_classes_by_action = {
+        'share': [permissions.AllowAny]
+    }
     filter_backends = (
         filters.SearchFilter,
         filters.OrderingFilter,
@@ -101,6 +104,14 @@ class FileViewSet(viewsets.ModelViewSet):
                 return FileUpdateSerializer
             case _:
                 return super().get_serializer_class()
+
+    def get_permissions(self):
+        try:
+            # return permission_classes depending on `action` 
+            return [permission() for permission in self.permission_classes_by_action[self.action]]
+        except KeyError: 
+            # action is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
 
     def perform_create(self, serializer):
         logger.info(f"Загрузка файла пользователем {self.request.user.username}. ")
@@ -168,7 +179,6 @@ class FileViewSet(viewsets.ModelViewSet):
         methods=("get",),
         detail=False,
         url_path="share/<slug:uuid>",
-        permission_classes=(permissions.IsAuthenticated,),
     )
     def share(self, request, pk=None, *args, **kwargs):
         return self.download(request, pk, *args, **kwargs)
