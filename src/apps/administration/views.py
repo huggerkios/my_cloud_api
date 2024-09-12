@@ -119,6 +119,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         return Response(
             {
                 "detail": "Вход выполнен.",
+                "is_admin": user.is_staff,
             },
             status=status.HTTP_200_OK,
         )
