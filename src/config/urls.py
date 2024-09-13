@@ -22,6 +22,7 @@ urlpatterns = [
     ),
     path("api/v1/cloud/", include("apps.cloud.urls")),
     path("api/v1/", include("apps.administration.urls")),
+    path("browsable-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]
 
 if settings.DEBUG:
