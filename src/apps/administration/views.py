@@ -41,6 +41,7 @@ User = get_user_model()
     ),
     logout=extend_schema(
         summary="Выход из аккаунта",
+        request=None,
         responses={
             status.HTTP_200_OK: inline_serializer(
                 name="logout_detail_message",
@@ -127,7 +128,6 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(
         methods=("post",),
         detail=False,
-        serializer_class=None,
         permission_classes=(permissions.IsAuthenticated,),
     )
     def logout(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
@@ -154,6 +154,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     ),
     admin_status_set=extend_schema(
         summary="Изменение статуса пользователя",
+        request=None,
         responses={
             status.HTTP_201_CREATED: inline_serializer(
                 name="admin_status_set_detail_message",
@@ -186,7 +187,6 @@ class UserViewSet(
         methods=("post",),
         detail=True,
         url_path="admin-set",
-        serializer_class=None,
         permission_classes=(permissions.IsAdminUser,),
     )
     def admin_status_set(self, request, *args, **kwargs):
